@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+
+set -eau;
+
+script=$1
+
+
+# Will attempt to retrieve these from environment variables, else fallback to defaults
+CHROMIUM_PATH=${CHROMIUM_PATH:-"$(pwd)/.chromium/"}
+LAUNCH_CMD=${LAUNCH_CMD:-"./chrome --no-first-run --start-maximized --window-position=0,0 --bwsi --disable-dev-shm-usage --remote-debugging-port=9223 --no-sandbox --user-data-dir"}
+
+
+if [ -z "$script" ]; then
+    echo "Usage: $0 <script filepath>"
+    exit 1
+elif [ ! -f "$script" ]; then
+    echo "File not found: $script"
+    exit 1
+fi
+
+
+#trap "kill -9 0" EXIT INT TERM
+source ./utils.sh
+
+echo "Launching Chromium container..."
+
+declare container="";
+declare -i _exited=0;
+cleanup(){
+  if [ $_exited -eq 1 ]; then
+    return;
+  fi
+  _exited=1;
+  _exited=1;
+
+  if [ -n "$container" ]; then
+    echo "Cleaning up... Container id is $container"
+    docker kill $container || true;
+  fi
+  
+   # Check if jobs are still running before attempting to kill
+  if [ -n "$(jobs -p)" ]; then
+    jobs -p | xargs kill 2>/dev/null|| true;
+  fi
+  
+}
+trap cleanup EXIT INT TERM
+container=$(docker run --rm \
+  --platform linux/amd64 \
+  -d \
+  -p 9222:9222 \
+  -p 5999:5999 \
+  -v $(pwd)/.chromium:/etc/puppetask/chromium/ \
+  -e LAUNCH_CMD="$LAUNCH_CMD" \
+  -e DISPLAY=:99 \
+  --privileged \
+  --cap-add SYS_ADMIN \
+  --cap-add NET_ADMIN \
+  teocns/puppetask:chromium-portable)
+
+
+
+echo "started $container"
+
+
+wait_for_chromium
+
+# start vnc
+vncviewer -RemoteResize localhost:5999 &>/dev/null &
+
+
+sleep 23910920231931;
+# Run the script
+node $script
+
+
+
+
+
+
+

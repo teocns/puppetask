@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -e;
+
+
+cwd=$(cd $(dirname "${BASH_SOURCE[0]}") && pwd)
+
+cd $cwd;
+
+
+
+
+#docker build -t teocns/puppetask -f Dockerfile .
+docker build -t teocns/puppetask:chromium-portable -f Dockerfile.chromium.portable .
+
+
+
