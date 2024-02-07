@@ -1,21 +1,21 @@
-version: "3.2"
+version: "3.8"
 services:
   demo:
-    image: teocns/puppetask:chromium-portable
+    image: teocns/puppetask:chromium-standalone
     build:
-      context: ./docker/
-      dockerfile: Dockerfile.chromium.portable
+      context: ./docker
+      dockerfile: Dockerfile
     platform: linux/amd64
+    shm_size: 2gb
     ports:
       - 9222:9222
       - 5999:5999
     volumes:
-      - ./.chromium:/etc/puppetask/chromium/
+      - /local/chromium/path:/etc/puppetask/chromium/
     environment:
-      LAUNCH_CMD: ./chrome --no-first-run --start-maximized --bwsi --disable-dev-shm-usage --remote-debugging-port=9223 --no-sandbox --user-data-dir
+      LAUNCH_CMD: /etc/puppetask/chromium/chrome --no-first-run --start-maximized --user-data-dir=/var/data/chromium
     privileged: true
     cap_add:
       - SYS_ADMIN
       - NET_ADMIN
-    
 

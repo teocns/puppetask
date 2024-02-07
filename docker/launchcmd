@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eau;
+
+$LAUNCH_CMD & pid=$!;
+
+wait $pid;

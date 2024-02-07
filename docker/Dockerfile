@@ -49,9 +49,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   wget \
   socat \
   supervisor \
-  x11vnc \
   xvfb \
-  fluxbox; \
   dbus-x11 \
   libcairo2 \
   libxcb1 \
@@ -59,26 +57,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libxv1 \
   libopus0 \
   libvpx6 \
-# Google emojis
-fonts-noto-color-emoji \
-# Japanese fonts
-fonts-takao-mincho \
-# Chinese fonts
-fonts-wqy-zenhei xfonts-intl-chinese xfonts-wqy \
-# Korean fonts
-fonts-wqy-microhei \
-wmctrl \
-x11-xserver-utils; \
-  apt-get clean -y; \
-  rm -rf /var/lib/apt/lists/* /var/cache/apt/*;
+  fonts-noto-color-emoji \
+  fonts-takao-mincho \
+  fonts-wqy-zenhei xfonts-intl-chinese xfonts-wqy \
+  tigervnc-standalone-server tigervnc-xorg-extension \
+  fonts-wqy-microhei \
+  wmctrl \
+  x11-xserver-utils; 
 
 
-
-RUN apt-get update -y && apt-get install -y tigervnc-standalone-server tigervnc-xorg-extension; \
-    apt-get clean -y; \
-    rm -rf /var/lib/apt/lists/* /var/cache/apt/*;
-
-
+#
+# install neko chromium
+RUN set -eux; \
+    echo "deb http://ftp.de.debian.org/debian bookworm main" >> /etc/apt/sources.list; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends unzip chromium chromium-common chromium-sandbox openbox; \
+    #
+    # install widevine module
+    CHROMIUM_DIR="/usr/lib/chromium"; \
+    WIDEVINE_VERSION=$(wget --quiet -O - https://dl.google.com/widevine-cdm/versions.txt | tail -n 1); \
+    wget -O /tmp/widevine.zip "https://dl.google.com/widevine-cdm/${WIDEVINE_VERSION}-linux-x64.zip"; \
+    mkdir -p "${CHROMIUM_DIR}/WidevineCdm/_platform_specific/linux_x64"; \
+    unzip -p /tmp/widevine.zip LICENSE.txt > "${CHROMIUM_DIR}/WidevineCdm/LICENSE"; \
+    unzip -p /tmp/widevine.zip manifest.json > "${CHROMIUM_DIR}/WidevineCdm/manifest.json"; \
+    unzip -p /tmp/widevine.zip libwidevinecdm.so > "${CHROMIUM_DIR}/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so"; \
+    find "${CHROMIUM_DIR}/WidevineCdm" -type d -exec chmod 0755 '{}' \;; \
+    find "${CHROMIUM_DIR}/WidevineCdm" -type f -exec chmod 0644 '{}' \;; \
+    rm /tmp/widevine.zip;
 
 VOLUME /etc/puppetask/chromium
 
@@ -108,6 +113,7 @@ RUN groupadd --gid $USER_GID $USERNAME; \
     chown -R $USERNAME:$USERNAME /home/$USERNAME;
 
 
+
 COPY dbus /usr/bin/dbus
 COPY supervisord.conf /etc/supervisor/supervisord.conf
 
@@ -123,7 +129,11 @@ EXPOSE 9222
 # Expose the VNC port for external connections
 EXPOSE 5999
 
-
 WORKDIR /etc/puppetask/chromium/
+
+COPY ./launchcmd /etc/puppetask/launchcmd
+
+COPY --chown=${USERNAME} preferences.json /etc/puppetask/.config/chromium/Default/Preferences
+
 
 CMD /usr/bin/supervisord -c "/etc/supervisor/supervisord.conf"
